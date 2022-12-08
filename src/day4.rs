@@ -9,7 +9,7 @@ fn solve1(data: String) -> usize {
 
 fn solve2(data: String) -> usize {
     let parsed = parse(data);
-    // How to avoid these clone calls?
+    // TODO: How to avoid these clone calls?
     parsed.into_iter().filter(|p| !p.0.clone().collect::<Vec<u16>>().intersect(p.1.clone().collect()).is_empty()).count()
 }
 

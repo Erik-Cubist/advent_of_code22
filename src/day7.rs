@@ -34,8 +34,7 @@ impl Dir {
         let filtered_size = dir_sizes.iter().map(|x| x.1).sum();
         if total_size < limit {
             (total_size, filtered_size + total_size)
-        }
-        else {
+        } else {
             (total_size, filtered_size)
         }
     }
@@ -45,13 +44,9 @@ impl Dir {
         let dir_sizes : Vec<(i32, i32)> = self.dirs.borrow().iter().map(|x| x.max_size(limit)).collect();
         let total_size = size + dir_sizes.iter().map(|x| x.0).sum::<i32>();
         let max_size = match dir_sizes.iter().map(|x| x.1).filter(|&x| x > limit).min() { Some(size) => size, None => 0};
-        if total_size < limit {
+        if max_size < limit {
             (total_size, total_size)
-        }
-        else if max_size < limit {
-            (total_size, total_size)
-        }
-        else {
+        } else {
             (total_size, min(total_size, max_size))
         }
     }
@@ -77,7 +72,7 @@ fn parse(input: String) -> Rc<Dir> {
     for line in lines {
         match line.as_slice() { 
             ["$", "cd", "/"] => current = Rc::clone(&root),
-            ["$", "cd", ".."] => current = Rc::clone(match current.parent { Some(ref p) => p, None => panic!("Can't goo above root")}),
+            ["$", "cd", ".."] => current = Rc::clone(match current.parent { Some(ref p) => p, None => panic!("Can't go above root")}),
             ["$", "cd", dir] => {let tmp = Rc::clone(&current.dirs.borrow().iter().find(|&n| n.name == *dir).unwrap()); current = Rc::clone(&tmp)},
             ["$", "ls"] => (),
             ["dir", dir] => current.dirs.borrow_mut().push(Rc::new(Dir::new(dir, Some(Rc::clone(&current))))),
