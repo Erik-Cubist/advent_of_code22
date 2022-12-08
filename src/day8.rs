@@ -31,48 +31,54 @@ fn scenic<'a, I>(row: &mut I) -> ()
     }
 }
 
-fn solve1(data: String) -> usize {
-    let mut parsed = parse(data);
+trait WorkOnIterator {
+    fn apply<'a, T: Iterator<Item =  &'a mut Tree>>(&self, s: &mut T) -> ();
+}
+
+fn iterate_all_directions<F>(fun: F, parsed: &mut Vec<Vec<Tree>>)
+    where
+        F: WorkOnIterator,
+{
     for row in parsed.iter_mut() {
-        detect(&mut row.iter_mut());
+        fun.apply(&mut row.iter_mut());
     }
     for row in parsed.iter_mut() {
-        detect(&mut row.iter_mut().rev());
+        fun.apply(&mut row.iter_mut().rev());
     }
     let rows = parsed.len();
     let cols = parsed[0].len();
     // Is there really no better way of getting a mutable iterator over columns?
     for i in 0..cols {
-        detect(&mut parsed.iter_mut().flatten().skip(i).step_by(rows));
+        fun.apply(&mut parsed.iter_mut().flatten().skip(i).step_by(rows));
     }
     for i in 0..cols {
-        detect(&mut parsed.iter_mut().flatten().rev().skip(i).step_by(rows));
+        fun.apply(&mut parsed.iter_mut().flatten().rev().skip(i).step_by(rows));
     }
-    
+}
+
+struct Detect;
+impl WorkOnIterator for Detect {
+    fn apply<'a, T: Iterator<Item=&'a mut Tree>>(&self, s: &mut T) -> () {
+        detect(s)
+    }
+}
+
+struct Scenic;
+impl WorkOnIterator for Scenic {
+    fn apply<'a, T: Iterator<Item=&'a mut Tree>>(&self, s: &mut T) -> () {
+        scenic(s)
+    }
+}
+
+fn solve1(data: String) -> usize {
+    let mut parsed = parse(data);
+    iterate_all_directions(Detect, &mut parsed);    
     parsed.iter().map(|row| row.iter().filter(|t| t.visible).count()).sum()
 }
 
-// TODO: solve1 and solve2 are identical except the last line and that detect or scenic is called.
-// It should be possible to extract an iterate_all_directions function and pass detect or scenic
-// as a parameter. How can this be done?
 fn solve2(data: String) -> u32 {
     let mut parsed = parse(data);
-    for row in parsed.iter_mut() {
-        scenic(&mut row.iter_mut());
-    }
-    for row in parsed.iter_mut() {
-        scenic(&mut row.iter_mut().rev());
-    }
-    let rows = parsed.len();
-    let cols = parsed[0].len();
-    // Is there really no better way of getting a mutable iterator over columns?
-    for i in 0..cols {
-        scenic(&mut parsed.iter_mut().flatten().skip(i).step_by(rows));
-    }
-    for i in 0..cols {
-        scenic(&mut parsed.iter_mut().flatten().rev().skip(i).step_by(rows));
-    }
-
+    iterate_all_directions(Scenic, &mut parsed);
     parsed.iter().map(|row| row.iter().map(|t| t.scenic).max().unwrap()).max().unwrap()
 }
 
