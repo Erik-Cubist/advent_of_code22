@@ -1,10 +1,12 @@
-﻿use std::mem::swap;
+﻿use std::collections::HashSet;
+use std::mem::swap;
 
 fn solve1(data: String) -> usize {
     let (map, start, end) = parse(data);
     let mut paths: &mut Vec<Vec<(usize, usize)>>  = &mut vec![vec![start]];
     let mut new_paths: &mut Vec<Vec<(usize, usize)>>  = &mut Vec::new();
-    let mut visisted = vec![start];
+    let mut visited = HashSet::new();
+    visited.insert(start);
 
     loop {
         for path in paths.iter() {
@@ -12,8 +14,8 @@ fn solve1(data: String) -> usize {
                 if next == end {
                     return path.len();
                 }
-                if !visisted.contains(&next) {
-                    visisted.push(next);
+                if !visited.contains(&next) {
+                    visited.insert(next);
                     let mut new_path = path.clone();
                     new_path.push(next);
                     new_paths.push(new_path);
@@ -54,7 +56,8 @@ fn solve2(data: String) -> usize {
     let (map, _, end) = parse(data);
     let mut paths: &mut Vec<Vec<(usize, usize)>>  = &mut vec![vec![end]];
     let mut new_paths: &mut Vec<Vec<(usize, usize)>>  = &mut Vec::new();
-    let mut visisted = vec![end];
+    let mut visited = HashSet::new();
+    visited.insert(end);
 
     loop {
         for path in paths.iter() {
@@ -62,8 +65,8 @@ fn solve2(data: String) -> usize {
                 if map[next.0][next.1] == b'a' {
                     return path.len();
                 }
-                if !visisted.contains(&next) {
-                    visisted.push(next);
+                if !visited.contains(&next) {
+                    visited.insert(next);
                     let mut new_path = path.clone();
                     new_path.push(next);
                     new_paths.push(new_path);
