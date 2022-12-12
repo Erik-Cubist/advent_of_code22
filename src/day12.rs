@@ -41,8 +41,8 @@ fn allowed_next_steps(map: &Vec<Vec<u8>>, point: &(usize, usize)) -> Vec<(usize,
     result
 }
 
-fn allowed_previous_steps(map: &Vec<Vec<u8>>, point: &(usize, usize)) -> Vec<(usize, usize)> {
-    let (l, r) = point;
+fn allowed_previous_steps(map: &Vec<Vec<u8>>, point: &(usize, usize, usize)) -> Vec<(usize, usize)> {
+    let (l, r, _) = point;
     let mut result = Vec::new();
     if *l > 0 && map[*l][*r] <= map[l-1][*r] + 1 { result.push((l-1, *r)); }
     if l+1 < map.len() && map[*l][*r] <= map[l+1][*r] + 1 { result.push((l+1, *r)); }
@@ -54,22 +54,20 @@ fn allowed_previous_steps(map: &Vec<Vec<u8>>, point: &(usize, usize)) -> Vec<(us
 
 fn solve2(data: String) -> usize {
     let (map, _, end) = parse(data);
-    let mut paths: &mut Vec<Vec<(usize, usize)>>  = &mut vec![vec![end]];
-    let mut new_paths: &mut Vec<Vec<(usize, usize)>>  = &mut Vec::new();
+    let mut paths: &mut Vec<(usize, usize, usize)>  = &mut vec![(end.0, end.1, 1)];
+    let mut new_paths: &mut Vec<(usize, usize, usize)>  = &mut Vec::new();
     let mut visited = HashSet::new();
     visited.insert(end);
 
     loop {
         for path in paths.iter() {
-            for next in allowed_previous_steps(&map, path.last().unwrap()) {
+            for next in allowed_previous_steps(&map, &path) {
                 if map[next.0][next.1] == b'a' {
-                    return path.len();
+                    return path.2;
                 }
                 if !visited.contains(&next) {
                     visited.insert(next);
-                    let mut new_path = path.clone();
-                    new_path.push(next);
-                    new_paths.push(new_path);
+                    new_paths.push((next.0, next.1, path.2 + 1));
                 }
             }
         }
