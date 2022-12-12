@@ -2,10 +2,6 @@
 
 fn solve1(data: String) -> usize {
     let (map, start, end) = parse(data);
-    solve(&map, start, end)
-}
-
-fn solve(map: &Vec<Vec<u8>>, start: (usize, usize), end: (usize, usize)) -> usize {
     let mut paths: &mut Vec<Vec<(usize, usize)>>  = &mut vec![vec![start]];
     let mut new_paths: &mut Vec<Vec<(usize, usize)>>  = &mut Vec::new();
     let mut visisted = vec![start];
@@ -27,9 +23,10 @@ fn solve(map: &Vec<Vec<u8>>, start: (usize, usize), end: (usize, usize)) -> usiz
 
         swap(&mut paths, &mut new_paths);
         new_paths.clear();
-        if paths.is_empty() { return 999999;}
+        if paths.is_empty() { panic!("No path found");}
     }
 }
+
 
 fn allowed_next_steps(map: &Vec<Vec<u8>>, point: &(usize, usize)) -> Vec<(usize, usize)> {
     let (l, r) = point;
@@ -42,16 +39,42 @@ fn allowed_next_steps(map: &Vec<Vec<u8>>, point: &(usize, usize)) -> Vec<(usize,
     result
 }
 
+fn allowed_previous_steps(map: &Vec<Vec<u8>>, point: &(usize, usize)) -> Vec<(usize, usize)> {
+    let (l, r) = point;
+    let mut result = Vec::new();
+    if *l > 0 && map[*l][*r] <= map[l-1][*r] + 1 { result.push((l-1, *r)); }
+    if l+1 < map.len() && map[*l][*r] <= map[l+1][*r] + 1 { result.push((l+1, *r)); }
+    if *r > 0 && map[*l][*r] <= map[*l][r-1] + 1 { result.push((*l, r-1)); }
+    if r+1 < map[*l].len() && map[*l][*r] <= map[*l][r+1] + 1 { result.push((*l, r+1)); }
+
+    result
+}
+
 fn solve2(data: String) -> usize {
     let (map, _, end) = parse(data);
-    let mut results = Vec::new();
-    let starts = map.iter().enumerate().map(|(l, v)| v.iter().enumerate().filter(|(_, c)| **c == b'a').map(|(r, _)| (l, r)).collect::<Vec<(usize, usize)>>());
-    
-    for start in starts.flatten() {
-        results.push(solve(&map, start, end))
+    let mut paths: &mut Vec<Vec<(usize, usize)>>  = &mut vec![vec![end]];
+    let mut new_paths: &mut Vec<Vec<(usize, usize)>>  = &mut Vec::new();
+    let mut visisted = vec![end];
+
+    loop {
+        for path in paths.iter() {
+            for next in allowed_previous_steps(&map, path.last().unwrap()) {
+                if map[next.0][next.1] == b'a' {
+                    return path.len();
+                }
+                if !visisted.contains(&next) {
+                    visisted.push(next);
+                    let mut new_path = path.clone();
+                    new_path.push(next);
+                    new_paths.push(new_path);
+                }
+            }
+        }
+
+        swap(&mut paths, &mut new_paths);
+        new_paths.clear();
+        if paths.is_empty() { panic!("No path found");}
     }
-    
-    *results.iter().min().unwrap()
 }
 
 fn parse(data: String) -> (Vec<Vec<u8>>, (usize, usize), (usize, usize)) {
