@@ -25,7 +25,9 @@ fn solve2(data: String, max_coord: i32) -> u64 {
     let parsed = parse(data);
     let length = parsed.len();
     let ranges: Vec<i32> = parsed.iter().map(|p| (p.beacon.x - p.sensor.x).abs() + (p.beacon.y - p.sensor.y).abs()).collect();
-    for x in 0..=max_coord {
+    let mut x = 0;
+    while x <= max_coord {
+        let mut increment = 16;
         let mut y = 0;
         let x_distances: Vec<i32> = parsed.iter().map(|p| (x - p.sensor.x).abs()).collect();
         while y <= max_coord {
@@ -33,9 +35,10 @@ fn solve2(data: String, max_coord: i32) -> u64 {
             for i in 0..length {
                 let y_dist = (parsed[i].sensor.y - new_y).abs();
                 let dist = ranges[i] - x_distances[i] - y_dist;
-                if dist >= 0 { new_y += dist + 1; }
+                if dist >= increment - 1 { new_y += dist + 2 - increment; }
             }
-            if y == new_y { return 4_000_000 * x as u64 + new_y as u64; }
+            if y == new_y { increment /= 2; } 
+            if increment == 0 { return 4_000_000 * x as u64 + new_y as u64; }
             y = new_y;
 
             // let y_distances: Vec<i32> = parsed.iter().map(|p| (y - p.sensor.y).abs()).collect();
@@ -43,6 +46,8 @@ fn solve2(data: String, max_coord: i32) -> u64 {
             // if to_border < 0 { return 4_000_000 * x as u64 + y as u64; }
             // y += to_border + 1;
         }
+        
+        x+= increment;
     }
     
     panic!("No position for beacon");
