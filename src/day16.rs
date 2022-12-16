@@ -1,5 +1,7 @@
 ﻿use std::cmp::max;
 use std::collections::{HashMap, HashSet};
+use std::iter;
+use std::mem::swap;
 use regex::Regex;
 
 #[derive(Clone)]
@@ -7,38 +9,135 @@ struct Valve { flow: i32, can_be_opened: bool, tunnels: Vec<String> }
 
 fn solve1(data: String) -> i32 {
     let parsed = parse(data);
-    let visited = HashSet::new();
+    let valves : Vec::<&String> = parsed.iter().filter(|(_, v)| v.can_be_opened).map(|(k, _)| k).collect();
+    let mut distances = HashMap::new();
+    let start = "AA".to_owned();
+    for v1 in valves.iter().chain(iter::once(&&start)) {
+        let mut dist = HashMap::new();
+        for v2 in valves.iter() {
+            if v1 != v2 {
+                dist.insert(*v2, distance(v1, v2, &parsed));
+            }
+        }
+        
+        distances.insert(*v1, dist);
+    }
     
-    crawl(30, &"AA", &parsed, &visited)
+    println!("Distances mapped, starting to crawl!");
+    
+    crawl(30, &"AA".to_string(), &parsed, &distances, &valves)
+    
+    //crawl(30, &"AA", &parsed, &HashSet::new())
 }
 
-fn crawl(minutes_left: i32, current_key: &str, parsed: &HashMap::<String, Valve>, visited: &HashSet::<String>) -> i32 {
-    if minutes_left <= 0 { return 0;}
-    if visited.contains(current_key) { return 0; }
-    if parsed.iter().filter(|(_, v)| v.can_be_opened).count() == 0 { return 0;}
+fn crawl(minutes_left: i32, start: &String, data: &HashMap<String, Valve>, distances: &HashMap<&String, HashMap<&String, i32>>, valves_left: &Vec<&String>) -> i32 {
+    if valves_left.is_empty() || minutes_left < 0 { return 0;}
+    let dist = &distances[start];
+    
+    let result = valves_left.iter().filter(|v| minutes_left - dist[*v] > 0).map(|v| data[*v].flow * (minutes_left - 1 - dist[*v]) + crawl(minutes_left - dist[*v] - 1, v, data, distances, &valves_left.iter().filter(|l| *l != v).map(|l| *l).collect())).max();
+    
+    match result {
+        Some(n) => n,
+        None => 0
+    }
+}
 
-    let mut pressure_released = 0;
-    let mut sub_result1 = 0;
+fn distance(start: &String, end: &String, data: &HashMap<String, Valve>) -> i32 {
+    let mut paths: &mut Vec<&String>  = &mut Vec::new();
+    let mut new_paths: &mut Vec<&String>  = &mut Vec::new();
+    let mut visited = HashSet::new();
+    let mut steps = 1;
+    paths.push(start);
+    visited.insert(start);
 
-    if parsed[current_key].can_be_opened {
-        let mut copy = parsed.clone();
-        let mut current = copy.get_mut(current_key).unwrap();
-        current.can_be_opened = false;
-        pressure_released += (minutes_left -1) * current.flow;
-        sub_result1 = parsed[current_key].tunnels.iter().map(|t| crawl(minutes_left - 2, &t, &copy, &HashSet::new())).max().unwrap();
+    loop {
+        for path in paths.iter() {
+            for next in data[*path].tunnels.iter() {
+                if next == end {
+                    return steps;
+                }
+                if !visited.contains(next) {
+                    visited.insert(next);
+                    new_paths.push(next);
+                }
+            }
+        }
+
+        steps += 1;
+        swap(&mut paths, &mut new_paths);
+        new_paths.clear();
+        if paths.is_empty() { panic!("No path found");}
+    }
+}
+
+// fn crawl(minutes_left: i32, current_key: &str, parsed: &HashMap::<String, Valve>, visited: &HashSet::<String>) -> i32 {
+//     if minutes_left <= 0 { return 0;}
+//     if visited.contains(current_key) { return 0; }
+//     if parsed.iter().filter(|(_, v)| v.can_be_opened).count() == 0 { return 0;}
+// 
+//     let mut pressure_released = 0;
+//     let mut sub_result1 = 0;
+// 
+//     if parsed[current_key].can_be_opened {
+//         let mut copy = parsed.clone();
+//         let mut current = copy.get_mut(current_key).unwrap();
+//         current.can_be_opened = false;
+//         pressure_released += (minutes_left -1) * current.flow;
+//         sub_result1 = parsed[current_key].tunnels.iter().map(|t| crawl(minutes_left - 2, &t, &copy, &HashSet::new())).max().unwrap();
+//     }
+// 
+//     let mut visited_copy = visited.clone();
+//     visited_copy.insert(current_key.to_string());
+//     let sub_result2 = parsed[current_key].tunnels.iter().map(|t| crawl(minutes_left - 1, &t, parsed, &visited_copy)).max().unwrap();
+//     
+//     max(sub_result1 + pressure_released, sub_result2)
+// }
+
+
+fn solve2(data: String, _max_coord: i32) -> i32 {
+    let parsed = parse(data);
+    let valves : Vec::<&String> = parsed.iter().filter(|(_, v)| v.can_be_opened).map(|(k, _)| k).collect();
+    let mut distances = HashMap::new();
+    let start = "AA".to_owned();
+    for v1 in valves.iter().chain(iter::once(&&start)) {
+        let mut dist = HashMap::new();
+        for v2 in valves.iter() {
+            if v1 != v2 {
+                dist.insert(*v2, distance(v1, v2, &parsed));
+            }
+        }
+
+        distances.insert(*v1, dist);
     }
 
-    let mut visited_copy = visited.clone();
-    visited_copy.insert(current_key.to_string());
-    let sub_result2 = parsed[current_key].tunnels.iter().map(|t| crawl(minutes_left - 1, &t, parsed, &visited_copy)).max().unwrap();
-    
-    max(sub_result1 + pressure_released, sub_result2)
+    println!("Distances mapped, starting to crawl!");
+
+    crawl2(26, &start, 26, &start, &parsed, &distances, &valves, 0)
 }
 
+fn crawl2(minutes_you: i32, start_you: &String, minutes_elephant: i32, start_elephant: &String, data: &HashMap<String, Valve>, distances: &HashMap<&String, HashMap<&String, i32>>, valves_left: &Vec<&String>, steps: i32) -> i32 {
+    if minutes_you < 0 || minutes_elephant < 0 { panic!("Minutes left should not be able to get negative")}
+    if valves_left.is_empty() { return 0;}
+    let dist_you = &distances[start_you];
+    let dist_elephant = &distances[start_elephant];
 
-fn solve2(data: String, _max_coord: i32) -> u64 {
-    let _parsed = parse(data);
-    1
+    let result_you = if steps % 2 == 0 || steps > 7 {valves_left.iter().filter(|v| minutes_you - dist_you[*v] > 0)
+        .map(|v| 
+            data[*v].flow * (minutes_you - 1 - dist_you[*v])
+                + crawl2(minutes_you - dist_you[*v] - 1, v, minutes_elephant, start_elephant, data, distances, &valves_left.iter().filter(|l| *l != v).map(|l| *l).collect(), steps + 1))
+        .max()} else { None };
+    let result_elephant = if steps % 2 == 1 || steps > 7 { valves_left.iter().filter(|v| minutes_elephant - dist_elephant[*v] > 0)
+        .map(|v|
+            data[*v].flow * (minutes_elephant - 1 - dist_elephant[*v])
+                + crawl2(minutes_you, start_you, minutes_elephant  - dist_elephant[*v] - 1, v, data, distances, &valves_left.iter().filter(|l| *l != v).map(|l| *l).collect(), steps + 1))
+        .max() } else { None };
+
+    match (result_you, result_elephant) {
+        (Some(n), Some(m)) => max(n, m),
+        (Some(n), None) => n,
+        (None, Some(m)) => m,
+        (None, None) => 0
+    }
 }
 
 fn parse(data: String) -> HashMap<String, Valve> {
@@ -68,19 +167,20 @@ mod tests {
     #[test]
     fn exercise1() {
         let result = solve1(input_exercise());
-        assert_eq!(result, 0);
+        assert_eq!(result, 1796);
     }
 
     #[test]
     fn example2() {
         let result = solve2(input_example(), 20);
-        assert_eq!(result, 0);
+        assert_eq!(result, 1707);
     }
 
     #[test]
     fn exercise2() {
         let result = solve2(input_exercise(), 4_000_000);
-        assert_eq!(result, 0);
+        // > 1993
+        assert_eq!(result, 1999);
     }
 
     fn input_example() -> String {
