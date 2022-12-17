@@ -3,69 +3,114 @@
 fn solve1(data: String, total_blocks: usize) -> usize {
     let parsed = parse(data);
     
-    let mut chamber = [['.'; 5000]; 9];
+    let mut chamber = [b'.'; 5000*9];
     for i in 1..5000 {
-        chamber[0][i] = '|';
-        chamber[8][i] = '|';
+        chamber[0 + i*9] = b'|';
+        chamber[8 + i*9] = b'|';
     }
     for i in 0..9 {
-        chamber[i][0] = '-';
+        chamber[i + 0 * 9] = b'-';
     }
     let mut tallest = 0;
+    let mut tallest_offset = 0;
     let mut jet_index = 0;
     
-    for rocks in 0..total_blocks {
+    let mut loop_start = (0, 0);
+    let mut loop_end = (0, 0);
+    let mut rocks = 0;
+    
+    while rocks < total_blocks {
+        if jet_index % parsed.len() == 1 {
+            if loop_start.0 == 0 {
+                loop_start = (rocks, tallest + tallest_offset);
+                println!("Starting loop at Rocks {}, tallest {}, jet index {}", rocks, tallest + tallest_offset, jet_index % parsed.len());
+            } else if loop_end.0 == 0 {
+                println!("Loop completed at Rocks {}, tallest {}, jet index {}", rocks, tallest + tallest_offset, jet_index % parsed.len());
+                loop_end = (rocks, tallest + tallest_offset);
+                
+                let periods = (total_blocks - rocks) / (loop_end.0 - loop_start.0);
+                rocks += periods * (loop_end.0 - loop_start.0);
+                tallest_offset += periods * (loop_end.1 - loop_start.1);
+                println!("Skipping to Rocks {}, tallest {}, jet index {}", rocks, tallest + tallest_offset, jet_index % parsed.len());
+            } else {
+                panic!("Should have skipped this");
+            }   
+        }
         let mut rock = new_rock(rocks, tallest);
         loop {
-            let shifted = shift_block(&chamber, &rock, parsed[jet_index % parsed.len()]);
+            shift_block(&chamber, &mut rock, parsed[jet_index % parsed.len()]);
             jet_index += 1;
-            match fall_down(&chamber, &shifted) {
-                Some(b) => rock = b,
-                None => {  rock = shifted; break; }
-            };
+            if  !fall_down(&chamber, &mut rock) {
+                break;
+            }
         }
         
         tallest = max(tallest, add_block(&mut chamber, &rock));
+        rocks += 1;
+
+        if tallest > 4990 {
+            shift_chamber(&mut chamber, 3000);
+            tallest -= 3000;
+            tallest_offset += 3000;
+        }
         
         //print(&chamber, tallest);
     }
     
-    tallest
+    tallest + tallest_offset
 }
 
-fn print(chamber: &[[char; 5000]; 9], tallest: usize) {
+fn shift_chamber(chamber: &mut [u8; 5000 * 9], shift: usize) {
+    for j in 9..(5000 - shift)*9 {
+        chamber[j] = chamber[j + shift*9];  
+    }
+
+    for j in 5000 - shift..5000 {
+        for i in 1..8 {
+            chamber[i + j*9] = b'.';
+        }
+    }
+}
+
+fn print(chamber: &[u8; 5000*9], tallest: usize) {
     println!();
     println!();
     for i in (0..=tallest).rev() {
         for j in 0..9 {
-            print!("{}", chamber[j][i]);
+            print!("{}", chamber[j + i*9]);
         }
         println!();
     }
 }
 
-fn add_block(chamber: &mut [[char; 5000]; 9], block: &Vec<(usize, usize)>) -> usize {
+fn add_block(chamber: &mut [u8; 5000*9], block: &Vec<(usize, usize)>) -> usize {
+    let mut m = 0;
     for pos in block.iter() {
-        chamber[pos.0][pos.1] = '#';
+        chamber[pos.0 + pos.1*9] = b'#';
+        if m < pos.1 { m = pos.1; }
     }
     
-    block.iter().map(|p| p.1).max().unwrap()
+    m
 }
 
-fn shift_block(chamber: &[[char; 5000]; 9], old: &Vec<(usize, usize)>, shift: i8) -> Vec::<(usize, usize)> {
-    let mut new = Vec::new();
-    for pos in old.iter() {
-        new.push(((pos.0 as i8 + shift) as usize, pos.1));
+fn shift_block(chamber: &[u8; 5000*9], block: &mut Vec<(usize, usize)>, shift: i8) {
+    if block.iter().any(|p| chamber[(p.0 as i8 + shift) as usize + p.1*9] != b'.') { return (); } 
+
+    for pos in block.iter_mut() {
+        pos.0 = (pos.0 as i8 + shift) as usize;
     }
-    if new.iter().any(|p| chamber[p.0][p.1] != '.') { old.clone() } else { new }
 }
 
-fn fall_down(chamber: &[[char; 5000]; 9], old: &Vec<(usize, usize)>) -> Option<Vec::<(usize, usize)>> {
-    let mut new = Vec::new();
-    for pos in old.iter() {
-        new.push((pos.0, pos.1 - 1));
+fn fall_down(chamber: &[u8; 5000*9], block: &mut Vec<(usize, usize)>) -> bool {
+    for pos in block.iter() {
+        if chamber[pos.0 + (pos.1-1)*9] != b'.' { return false }
     }
-    if new.iter().any(|p| chamber[p.0][p.1] != '.') { None } else { Some(new) }
+    
+    for pos in block.iter_mut() {
+        pos.1 -= 1;
+    }
+    
+    true
 }
 
 fn new_rock(rock_index: usize, tallest: usize) -> Vec::<(usize, usize)> {
@@ -79,13 +124,6 @@ fn new_rock(rock_index: usize, tallest: usize) -> Vec::<(usize, usize)> {
         _ => panic!("Not possible")
     }
 }
-
-
-fn solve2(data: String) -> usize {
-    let _parsed = parse(data);
-    1000000000000
-}
-
 
 fn parse(data: String) -> Vec<i8> {
     data.chars().map(|c| match c { '<' => -1, _ => 1}).collect()
@@ -104,20 +142,25 @@ mod tests {
     #[test]
     fn exercise1() {
         let result = solve1(input_exercise(), 2022);
-        // > 3035
         assert_eq!(result, 3069);
     }
 
     #[test]
     fn example2() {
-        let result = solve1(input_example(), 1000000000000);
+        let result = solve1(input_example(), 1_000_000_000_000);
+        // 10M =>          15142861 
+        // 100M =>         151428577 
+        // 1000M =>        1514285720
         assert_eq!(result, 1514285714288);
     }
 
     #[test]
     fn exercise2() {
-        let result = solve1(input_exercise(), 1000000000000);
-        assert_eq!(result, 0);
+        let result = solve1(input_exercise(), 1_000_000_000_000);
+        // 10M =>          15231655
+        // 100M =>         152316690
+        // 1000M =>        1523167154
+        assert_eq!(result, 1523167155404);
     }
 
     fn input_example() -> String {
