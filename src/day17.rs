@@ -72,16 +72,16 @@ fn shift_chamber(chamber: &mut [u8; 5000 * 9], shift: usize) {
     }
 }
 
-fn print(chamber: &[u8; 5000*9], tallest: usize) {
-    println!();
-    println!();
-    for i in (0..=tallest).rev() {
-        for j in 0..9 {
-            print!("{}", chamber[j + i*9]);
-        }
-        println!();
-    }
-}
+// fn print(chamber: &[u8; 5000*9], tallest: usize) {
+//     println!();
+//     println!();
+//     for i in (0..=tallest).rev() {
+//         for j in 0..9 {
+//             print!("{}", chamber[j + i*9]);
+//         }
+//         println!();
+//     }
+// }
 
 fn add_block(chamber: &mut [u8; 5000*9], block: &Vec<(usize, usize)>) -> usize {
     let mut m = 0;
