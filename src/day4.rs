@@ -53,7 +53,7 @@ mod tests {
     #[test]
     fn exercise2() {
         let result = solve2(input_exercise());
-        assert_eq!(result, 0);
+        assert_eq!(result, 907);
     }
 
     fn input_example() -> String {

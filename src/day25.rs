@@ -27,10 +27,6 @@
     }).collect::<String>().trim_start_matches('0').to_string()
 }
 
-fn solve2(data: String) -> usize {
-    let _parsed = parse(data);
-    panic!("unreachable");}
-
 fn parse(data: String) -> Vec<Vec<i8>> {
     data.split("\n").map(|l| l.chars().map(|c|match c {
         '0' => 0,
